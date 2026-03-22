@@ -8,17 +8,20 @@ from werkzeug.utils import secure_filename
 app = Flask(__name__)
 
 # --- Config ---
-UPLOAD_FOLDER = "static/uploads"
-ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+UPLOAD_FOLDER = os.path.join(BASE_DIR, "static", "uploads")
+
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 stripe.api_key = "sk_test_51TBJi9CWLpTu3fjIi7Rrys9ZeaW20qnPyTJbVAT9KFHZkFZfzkj7Q93JlbRsqkSdTGedLcu3MJYg6wjvabCC49Jw00XkdXRidI"
 
 # --- Helpers ---
 def allowed_file(filename):
+    ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def save_file(file):
@@ -236,34 +239,53 @@ def event_detail(event_id):
 
 @app.route("/post-event", methods=["GET", "POST"])
 def post_event():
+
     if request.method == "POST":
+
         title = request.form.get("title")
         location = request.form.get("location")
         date = request.form.get("date")
         description = request.form.get("description")
         price = request.form.get("price")
+
         image = request.files.get("image")
-        image_path = save_file(image)
+        image_path = ""
+
+        if image and image.filename != "" and allowed_file(image.filename):
+
+            filename = str(uuid.uuid4()) + "_" + secure_filename(image.filename)
+
+            filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+
+            print("Saving file to:", filepath)  # DEBUG
+
+            image.save(filepath)
+
+            image_path = f"static/uploads/{filename}"
 
         conn = sqlite3.connect("payments.db")
         c = conn.cursor()
+
         c.execute("""
         INSERT INTO events (title, location, date, description, image_url, price)
         VALUES (?, ?, ?, ?, ?, ?)
         """, (title, location, date, description, image_path, price))
+
         conn.commit()
         conn.close()
+
         return redirect("/events")
 
     return """
     <h1>Post Event</h1>
+
     <form method="POST" enctype="multipart/form-data">
         <input name="title" placeholder="Event title" required><br><br>
         <input name="location" placeholder="Location" required><br><br>
         <input type="date" name="date" required><br><br>
         <input name="price" placeholder="Ticket Price" required><br><br>
         <input type="file" name="image"><br><br>
-        <textarea name="description" placeholder="Description"></textarea><br><br>
+        <textarea name="description"></textarea><br><br>
         <button type="submit">Post Event</button>
     </form>
     """
