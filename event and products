@@ -1,0 +1,342 @@
+from flask import Flask, render_template, request, redirect
+import stripe
+import sqlite3
+import uuid
+import os
+from werkzeug.utils import secure_filename
+
+app = Flask(__name__)
+
+# --- Config ---
+UPLOAD_FOLDER = "static/uploads"
+ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
+stripe.api_key = "sk_test_51TBJi9CWLpTu3fjIi7Rrys9ZeaW20qnPyTJbVAT9KFHZkFZfzkj7Q93JlbRsqkSdTGedLcu3MJYg6wjvabCC49Jw00XkdXRidI"
+
+# --- Helpers ---
+def allowed_file(filename):
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def save_file(file):
+    if file and allowed_file(file.filename):
+        filename = str(uuid.uuid4()) + "_" + secure_filename(file.filename)
+        filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+        file.save(filepath)
+        return f"{UPLOAD_FOLDER}/{filename}"
+    return ""
+
+# --- Database Initialization ---
+def init_db():
+    conn = sqlite3.connect("payments.db")
+    c = conn.cursor()
+    # Users
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT,
+        password TEXT
+    )
+    """)
+    # Products
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS products (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        name TEXT,
+        price INTEGER,
+        description TEXT,
+        image_url TEXT,
+        is_promoted INTEGER DEFAULT 0
+    )
+    """)
+    # Events
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT,
+        location TEXT,
+        date TEXT,
+        description TEXT,
+        image_url TEXT,
+        price INTEGER,
+        is_promoted INTEGER DEFAULT 0
+    )
+    """)
+    # Transactions
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS transactions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        amount INTEGER,
+        status TEXT
+    )
+    """)
+    # Payment Links
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS payment_links (
+        id TEXT PRIMARY KEY,
+        amount INTEGER
+    )
+    """)
+    conn.commit()
+    conn.close()
+
+init_db()
+
+# --- Home / Products ---
+@app.route("/")
+def home():
+    conn = sqlite3.connect("payments.db")
+    c = conn.cursor()
+    c.execute("SELECT id, name, price, description, image_url FROM products")
+    products = c.fetchall()
+    conn.close()
+
+    html = "<h1>Product Marketplace</h1>"
+    html += '<a href="/post-product">Post Product</a> | <a href="/events">Events</a><br><br>'
+
+    for p in products:
+        html += "<div style='border:1px solid #ccc;padding:10px;margin:10px'>"
+        if p[4]:
+            html += f"<img src='/{p[4]}' width='200'><br>"
+        html += f"<h3><a href='/product/{p[0]}'>{p[1]}</a></h3>"
+        html += f"<p>Price: ${p[2]}</p>"
+        html += f"<p>{p[3]}</p>"
+        html += "</div>"
+
+    return html
+
+@app.route("/product/<int:product_id>")
+def product_page(product_id):
+    conn = sqlite3.connect("payments.db")
+    c = conn.cursor()
+    c.execute("SELECT id, name, price, description, image_url FROM products WHERE id=?", (product_id,))
+    product = c.fetchone()
+    conn.close()
+    if not product:
+        return "Product not found"
+
+    html = f"""
+    <h1>{product[1]}</h1>
+    <img src="/{product[4]}" width="300"><br><br>
+    <p>{product[3]}</p>
+    <h3>Price: ${product[2]}</h3>
+    <form action="/buy/{product[0]}" method="POST">
+        <button type="submit">Buy Now</button>
+    </form>
+    """
+    return html
+
+@app.route("/post-product", methods=["GET", "POST"])
+def post_product():
+    if request.method == "POST":
+        name = request.form.get("name")
+        price = request.form.get("price")
+        description = request.form.get("description")
+        image = request.files.get("image")
+        image_path = save_file(image)
+
+        conn = sqlite3.connect("payments.db")
+        c = conn.cursor()
+        c.execute("""
+        INSERT INTO products (user_id, name, price, description, image_url)
+        VALUES (?, ?, ?, ?, ?)
+        """, (1, name, price, description, image_path))
+        conn.commit()
+        conn.close()
+        return redirect("/")
+
+    return """
+    <h1>Post Product</h1>
+    <form method="POST" enctype="multipart/form-data">
+        <input name="name" placeholder="Product name" required><br><br>
+        <input name="price" placeholder="Price" required><br><br>
+        <input type="file" name="image"><br><br>
+        <textarea name="description" placeholder="Description"></textarea><br><br>
+        <button type="submit">Post Product</button>
+    </form>
+    """
+
+# --- Buy Product ---
+@app.route("/buy/<int:product_id>", methods=["POST"])
+def buy(product_id):
+    conn = sqlite3.connect("payments.db")
+    c = conn.cursor()
+    c.execute("SELECT name, price FROM products WHERE id=?", (product_id,))
+    product = c.fetchone()
+    conn.close()
+    if not product:
+        return "Product not found"
+
+    name, price = product
+    session = stripe.checkout.Session.create(
+        payment_method_types=["card"],
+        line_items=[{
+            "price_data": {
+                "currency": "usd",
+                "product_data": {"name": name},
+                "unit_amount": int(price) * 100
+            },
+            "quantity": 1
+        }],
+        mode="payment",
+        success_url="http://127.0.0.1:5000/success",
+        cancel_url="http://127.0.0.1:5000",
+    )
+    return redirect(session.url)
+
+# --- Events ---
+@app.route("/events")
+def events():
+    conn = sqlite3.connect("payments.db")
+    c = conn.cursor()
+    c.execute("SELECT id, title, location, date, image_url FROM events ORDER BY is_promoted DESC, date ASC")
+    events = c.fetchall()
+    conn.close()
+
+    html = "<h1>Events</h1>"
+    html += '<a href="/post-event">Post Event</a> | <a href="/">Products</a><br><br>'
+
+    for e in events:
+        html += "<div style='border:1px solid #ccc;padding:10px;margin:10px'>"
+        if e[4]:
+            html += f"<img src='/{e[4]}' width='200'><br>"
+        html += f"<h3><a href='/event/{e[0]}'>{e[1]}</a></h3>"
+        html += f"<p>{e[2]}</p>"
+        html += f"<p>{e[3]}</p>"
+        html += "</div>"
+
+    return html
+
+@app.route("/event/<int:event_id>")
+def event_detail(event_id):
+    conn = sqlite3.connect("payments.db")
+    c = conn.cursor()
+    c.execute("SELECT * FROM events WHERE id=?", (event_id,))
+    event = c.fetchone()
+    conn.close()
+    if not event:
+        return "Event not found"
+
+    html = f"""
+    <h1>{event[1]}</h1>
+    <img src='/{event[5]}' width='300'><br><br>
+    <p><b>Location:</b> {event[2]}</p>
+    <p><b>Date:</b> {event[3]}</p>
+    <p>{event[4]}</p>
+    <p><b>Price:</b> ${event[6]}</p>
+    <form action="/buy-ticket/{event[0]}" method="POST">
+        <button type="submit">Buy Ticket</button>
+    </form>
+    """
+    return html
+
+@app.route("/post-event", methods=["GET", "POST"])
+def post_event():
+    if request.method == "POST":
+        title = request.form.get("title")
+        location = request.form.get("location")
+        date = request.form.get("date")
+        description = request.form.get("description")
+        price = request.form.get("price")
+        image = request.files.get("image")
+        image_path = save_file(image)
+
+        conn = sqlite3.connect("payments.db")
+        c = conn.cursor()
+        c.execute("""
+        INSERT INTO events (title, location, date, description, image_url, price)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """, (title, location, date, description, image_path, price))
+        conn.commit()
+        conn.close()
+        return redirect("/events")
+
+    return """
+    <h1>Post Event</h1>
+    <form method="POST" enctype="multipart/form-data">
+        <input name="title" placeholder="Event title" required><br><br>
+        <input name="location" placeholder="Location" required><br><br>
+        <input type="date" name="date" required><br><br>
+        <input name="price" placeholder="Ticket Price" required><br><br>
+        <input type="file" name="image"><br><br>
+        <textarea name="description" placeholder="Description"></textarea><br><br>
+        <button type="submit">Post Event</button>
+    </form>
+    """
+
+# --- Buy Ticket ---
+@app.route("/buy-ticket/<int:event_id>", methods=["POST"])
+def buy_ticket(event_id):
+    conn = sqlite3.connect("payments.db")
+    c = conn.cursor()
+    c.execute("SELECT title, price FROM events WHERE id=?", (event_id,))
+    event = c.fetchone()
+    conn.close()
+    if not event:
+        return "Event not found"
+
+    title, price = event
+    session = stripe.checkout.Session.create(
+        payment_method_types=["card"],
+        line_items=[{
+            "price_data": {
+                "currency": "usd",
+                "product_data": {"name": title},
+                "unit_amount": int(price) * 100
+            },
+            "quantity": 1
+        }],
+        mode="payment",
+        success_url="http://127.0.0.1:5000/success",
+        cancel_url="http://127.0.0.1:5000/events",
+    )
+    return redirect(session.url)
+
+# --- Search ---
+@app.route("/search")
+def search():
+    query = request.args.get("q")
+    conn = sqlite3.connect("payments.db")
+    c = conn.cursor()
+    c.execute("SELECT id, title, location FROM events WHERE title LIKE ?", (f"%{query}%",))
+    results = c.fetchall()
+    conn.close()
+
+    html = "<h1>Search Results</h1>"
+    for r in results:
+        html += f"<p><a href='/event/{r[0]}'>{r[1]} - {r[2]}</a></p>"
+    return html
+
+# --- Payment Success ---
+@app.route("/success")
+def success():
+    conn = sqlite3.connect("payments.db")
+    c = conn.cursor()
+    c.execute("UPDATE transactions SET status='success' WHERE status='pending'")
+    conn.commit()
+    conn.close()
+    return "<h1>Payment Successful!</h1><a href='/dashboard'>Go to dashboard</a>"
+
+# --- Dashboard ---
+@app.route("/dashboard")
+def dashboard():
+    conn = sqlite3.connect("payments.db")
+    c = conn.cursor()
+    c.execute("SELECT * FROM transactions")
+    transactions = c.fetchall()
+    conn.close()
+
+    html = "<h1>Payment Dashboard</h1>"
+    html += "<table border=1>"
+    html += "<tr><th>ID</th><th>Amount</th><th>Status</th></tr>"
+    for t in transactions:
+        html += f"<tr><td>{t[0]}</td><td>{t[1]}</td><td>{t[2]}</td></tr>"
+    html += "</table>"
+    return html
+
+if __name__ == "__main__":
+    app.run(debug=True)
