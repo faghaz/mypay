@@ -2,6 +2,9 @@ from flask import Flask, render_template, request, redirect
 import stripe
 import sqlite3
 import uuid
+import random
+import string
+from datetime import datetime
 import os
 from werkzeug.utils import secure_filename
 
@@ -77,6 +80,15 @@ def init_db():
         status TEXT
     )
     """)
+
+ticket_number = generate_ticket_number()
+
+# Save to DB
+    c.execute("""
+    INSERT INTO tickets (ticket_number, user_email, event_id)
+    VALUES (?, ?, ?)
+    """, (ticket_number, email, event_id))
+
     # Payment Links
     c.execute("""
     CREATE TABLE IF NOT EXISTS payment_links (
@@ -342,6 +354,12 @@ def success():
     conn.commit()
     conn.close()
     return "<h1>Payment Successful!</h1><a href='/dashboard'>Go to dashboard</a>"
+
+#ticket code generator 
+def generate_ticket_number():
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    random_part = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
+    return f"TKT-{timestamp}-{random_part}"
 
 # --- Dashboard ---
 @app.route("/dashboard")
