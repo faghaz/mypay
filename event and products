@@ -59,12 +59,7 @@ def init_db():
         is_promoted INTEGER DEFAULT 0
     )
     """)
-
-import sqlite3
-
-conn = sqlite3.connect("tickets.db")
-cursor = conn.cursor()
-
+#tickets
     c.execute("""
     CREATE TABLE IF NOT EXISTS tickets (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
