@@ -1,1 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Payment Page</title>
+</head>
+<body>
 
+<h1>Payment Gateway</h1>
+
+<p>Amount: ${{ amount }}</p>
+
+<form action="/create-payment" method="POST">
+<input type="hidden" name="amount" value="{{ amount }}">
+<button type="submit">Pay Now</button>
+</form>
+
+</body>
+</html>
