@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect
 import stripe
 import sqlite3
 import uuid
+import qrcode
 import random
 import string
 from datetime import datetime
@@ -371,6 +372,18 @@ def generate_ticket_number():
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
     random_part = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
     return f"TKT-{timestamp}-{random_part}"
+
+#generate qrcode
+def generate_qr_code(ticket_number):
+    folder = "static/qrcodes"
+    os.makedirs(folder, exist_ok=True)
+
+    file_path = f"{folder}/{ticket_number}.png"
+
+    qr = qrcode.make(ticket_number)
+    qr.save(file_path)
+
+    return file_path
 
 # --- Dashboard ---
 @app.route("/dashboard")
