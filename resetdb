@@ -1,0 +1,70 @@
+import os
+import sqlite3
+
+DB_FILE = "payments.db"
+
+# Step 1: Delete existing database if it exists
+if os.path.exists(DB_FILE):
+    os.remove(DB_FILE)
+    print("Deleted old database.")
+
+# Step 2: Recreate database and tables
+conn = sqlite3.connect(DB_FILE)
+c = conn.cursor()
+
+# Products table
+c.execute("""
+CREATE TABLE IF NOT EXISTS products (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    name TEXT,
+    price INTEGER,
+    description TEXT,
+    image_url TEXT,
+    is_promoted INTEGER DEFAULT 0
+)
+""")
+
+# Events table
+c.execute("""
+CREATE TABLE IF NOT EXISTS events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT,
+    location TEXT,
+    date TEXT,
+    description TEXT,
+    image_url TEXT,
+    price INTEGER,
+    is_promoted INTEGER DEFAULT 0
+)
+""")
+
+# Users table
+c.execute("""
+CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT,
+    password TEXT
+)
+""")
+
+# Payment links table
+c.execute("""
+CREATE TABLE IF NOT EXISTS payment_links (
+    id TEXT PRIMARY KEY,
+    amount INTEGER
+)
+""")
+
+# Transactions table
+c.execute("""
+CREATE TABLE IF NOT EXISTS transactions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    amount INTEGER,
+    status TEXT
+)
+""")
+
+conn.commit()
+conn.close()
+print("Database recreated successfully.")
