@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Your Ticket</title>
+</head>
+<body>
+
+    <h2>🎟 Your Ticket</h2>
+
+    <p><strong>Ticket Number:</strong> {{ ticket_number }}</p>
+
+    <!-- Show QR Code -->
+    <img src="{{ url_for('static', filename='qrcodes/' + qr_filename) }}" 
+         alt="QR Code" width="250">
+
+    <br><br>
+
+    <!-- Download Button -->
+    <a href="{{ url_for('static', filename='qrcodes/' + qr_filename) }}" download>
+        <button>⬇ Download QR Code</button>
+    </a>
+
+</body>
+</html>
