@@ -1,0 +1,7 @@
+<h2>Create Payment Link</h2>
+
+<form action="/create-link" method="POST">
+<label>Amount</label>
+<input type="number" name="amount" required>
+<button type="submit">Generate Link</button>
+</form>
