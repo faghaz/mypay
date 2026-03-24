@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Search Results</title>
+</head>
+<body>
+
+<h1>🔍 Search Results</h1>
+
+<form method="GET" action="/search">
+    <input type="text" name="q" placeholder="Search events..." value="{{ query }}">
+    <button type="submit">Search</button>
+</form>
+
+<hr>
+
+{% if results %}
+    {% for r in results %}
+        <p>
+            <a href="/event/{{ r[0] }}">
+                {{ r[1] }} - {{ r[2] }}
+            </a>
+        </p>
+    {% endfor %}
+{% else %}
+    <p>No events found.</p>
+{% endif %}
+
+</body>
+</html>
