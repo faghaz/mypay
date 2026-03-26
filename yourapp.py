@@ -101,25 +101,13 @@ init_db()
 # --- Home ---
 @app.route("/")
 def home():
-    conn = sqlite3.connect("payments.db")
-    c = conn.cursor()
-    c.execute("SELECT id, name, price, description, image_url FROM products")
-    products = c.fetchall()
-    conn.close()
+    html = "<h1>Welcome</h1>"
 
-    
-    html = "<h1>Products</h1>"
-    html += '<a href="/register">register</a> | <a href="/login">login</a> | <a href="/logout">Logout</a><br><br>'
-    html += '<a href="/events">Products</a><br><br>'
+    html += '<a href="/register">Register</a> | '
+    html += '<a href="/login">Login</a> | '
+    html += '<a href="/logout">Logout</a><br><br>'
 
-    for p in products:
-        html += "<div style='border:1px solid #ccc;padding:10px;margin:10px'>"
-        if p[4]:
-            html += f"<img src='/{p[4]}' width='200'><br>"
-        html += f"<h3><a href='/product/{p[0]}'>{p[1]}</a></h3>"
-        html += f"<p>Price: ${p[2]}</p>"
-        html += f"<p>{p[3]}</p>"
-        html += "</div>"
+    html += '<a href="/events">Go to products</a><br><br>'s
 
     return html
 
