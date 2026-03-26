@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Post Event</title>
+</head>
+<body>
+    <h1>Post Event</h1>
+    <a href="/events">Back to Events</a><br><br>
+
+    <form method="POST" enctype="multipart/form-data">
+        <input name="title" placeholder="Event Title" required><br><br>
+        <input name="location" placeholder="Location" required><br><br>
+        <input type="date" name="date" required><br><br>
+        <textarea name="description" placeholder="Description"></textarea><br><br>
+        <input type="number" name="price" placeholder="Price"><br><br>
+
+        <h3>Address</h3>
+        <input name="zip_code" placeholder="Zip Code"><br><br>
+        <input name="street" placeholder="Street"><br><br>
+        <input name="city" placeholder="City"><br><br>
+
+        <select name="state" required>
+            {% for state in states["United States"] %}  <!-- Default US, you can adjust JS for dynamic -->
+                <option value="{{ state }}">{{ state }}</option>
+            {% endfor %}
+        </select><br><br>
+
+        <select name="country" required>
+            {% for country in countries %}
+                <option value="{{ country }}">{{ country }}</option>
+            {% endfor %}
+        </select><br><br>
+
+        <input type="file" name="image"><br><br>
+        <button type="submit">Post Event</button>
+    </form>
+</body>
+</html>
