@@ -58,19 +58,8 @@ def init_db():
        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)
-    # Products
-    c.execute("""
-    CREATE TABLE IF NOT EXISTS products (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER,
-        name TEXT,
-        price INTEGER,
-        description TEXT,
-        image_url TEXT,
-        is_promoted INTEGER DEFAULT 0
-    )
-    """)
-    # Events
+    
+        # Events
     c.execute("""
 CREATE TABLE IF NOT EXISTS events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -109,7 +98,7 @@ CREATE TABLE IF NOT EXISTS events (
 
 init_db()
 
-# --- Home / Products ---
+# --- Home ---
 @app.route("/")
 def home():
     conn = sqlite3.connect("payments.db")
@@ -119,9 +108,9 @@ def home():
     conn.close()
 
     
-    html = "<h1>Product Marketplace</h1>"
+    html = "<h1>Products</h1>"
     html += '<a href="/register">register</a> | <a href="/login">login</a> | <a href="/logout">Logout</a><br><br>'
-    html += '<a href="/post-product">Post Product</a> | <a href="/events">Events</a><br><br>'
+    html += '<a href="/events">Products</a><br><br>'
 
     for p in products:
         html += "<div style='border:1px solid #ccc;padding:10px;margin:10px'>"
@@ -200,56 +189,6 @@ def logout():
     session.pop("user_id", None)
     return redirect("/")
 
-@app.route("/product/<int:product_id>")
-def product_page(product_id):
-    conn = sqlite3.connect("payments.db")
-    c = conn.cursor()
-    c.execute("SELECT id, name, price, description, image_url FROM products WHERE id=?", (product_id,))
-    product = c.fetchone()
-    conn.close()
-    if not product:
-        return "Product not found"
-
-    html = f"""
-    <h1>{product[1]}</h1>
-    <img src="/{product[4]}" width="300"><br><br>
-    <p>{product[3]}</p>
-    <h3>Price: ${product[2]}</h3>
-    <form action="/buy/{product[0]}" method="POST">
-        <button type="submit">Buy Now</button>
-    </form>
-    """
-    return html
-
-@app.route("/post-product", methods=["GET", "POST"])
-def post_product():
-    if request.method == "POST":
-        name = request.form.get("name")
-        price = request.form.get("price")
-        description = request.form.get("description")
-        image = request.files.get("image")
-        image_path = save_file(image)
-
-        conn = sqlite3.connect("payments.db")
-        c = conn.cursor()
-        c.execute("""
-        INSERT INTO products (user_id, name, price, description, image_url)
-        VALUES (?, ?, ?, ?, ?)
-        """, (1, name, price, description, image_path))
-        conn.commit()
-        conn.close()
-        return redirect("/")
-
-    return """
-    <h1>Post Product</h1>
-    <form method="POST" enctype="multipart/form-data">
-        <input name="name" placeholder="Product name" required><br><br>
-        <input name="price" placeholder="Price" required><br><br>
-        <input type="file" name="image"><br><br>
-        <textarea name="description" placeholder="Description"></textarea><br><br>
-        <button type="submit">Post Product</button>
-    </form>
-    """
 
 # --- Buy Product ---
 @app.route("/buy/<int:product_id>", methods=["POST"])
@@ -291,7 +230,7 @@ def events():
      # html += '<a href="/login">Login to Post Event</a>'
 
     c.execute("""
-    SELECT id, title, location, date, city, state, country, image_url 
+    SELECT id, title, location, date, city, state, country, image_url, price 
     FROM events 
     ORDER BY is_promoted DESC, date ASC
     """)
@@ -299,9 +238,9 @@ def events():
     events = c.fetchall()
     conn.close()
 
-    html = "<h1>Events</h1>"
+    html = "<h1>Products</h1>"
     html += '<a href="/">Home</a><br><br>'
-    html += '<a href="/post-event">Post Event</a> | <a href="/search">Search event</a> | <a href="/">Products</a><br><br>'
+    html += '<a href="/post-event">Post product</a> | <a href="/search">Search product</a>'
 
     for e in events:
         html += "<div style='border:1px solid #ccc;padding:10px;margin:10px'>"
@@ -313,6 +252,11 @@ def events():
         html += f"<h3><a href='/event/{e[0]}'>{e[1]}</a></h3>"
         html += f"<p>{e[2]}</p>"
         html += f"<p>{e[3]}</p>"
+
+        if e[8] == 0:
+         html += "<p style='color:green;'><b>Free Event</b></p>"
+        else:
+         html += f"<p><b>Price:</b> $ {e[8]}</p>"
 
         # ✅ address preview
         html += f"<p><b>{e[4]}, {e[5]}, {e[6]}</b></p>"
