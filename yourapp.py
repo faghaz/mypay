@@ -107,7 +107,7 @@ def home():
     html += '<a href="/login">Login</a> | '
     html += '<a href="/logout">Logout</a><br><br>'
 
-    html += '<a href="/events">Go to products</a><br><br>'s
+    html += '<a href="/events">Go to products</a><br><br>'
 
     return html
 
