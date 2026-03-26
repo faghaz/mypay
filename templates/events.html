@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Events</title>
+</head>
+<body>
+
+<h1>Events</h1>
+
+<a href="/">Home</a><br><br>
+
+<a href="/post-event">Post Event</a> |
+<a href="/search">Search event</a> |
+<a href="/">Products</a>
+
+<br><br>
+
+{% for e in events %}
+<div style="border:1px solid #ccc;padding:10px;margin:10px">
+
+    {% if e[7] %}
+        <img src="/{{ e[7] }}" width="200"><br>
+    {% endif %}
+
+    <h3>
+        <a href="/event/{{ e[0] }}">{{ e[1] }}</a>
+    </h3>
+
+    <p>{{ e[2] }}</p>
+    <p>{{ e[3] }}</p>
+
+    <p><b>{{ e[4] }}, {{ e[5] }}, {{ e[6] }}</b></p>
+
+</div>
+{% endfor %}
+
+</body>
+</html>
