@@ -18,18 +18,42 @@
         <input name="zip_code" placeholder="Zip Code"><br><br>
         <input name="street" placeholder="Street"><br><br>
         <input name="city" placeholder="City"><br><br>
+<input name="zip_code" placeholder="Zip Code"><br><br>
+<input name="street" placeholder="Street"><br><br>
+<input name="city" placeholder="City"><br><br>
 
-        <select name="state" required>
-            {% for state in states["United States"] %}  <!-- Default US, you can adjust JS for dynamic -->
-                <option value="{{ state }}">{{ state }}</option>
-            {% endfor %}
-        </select><br><br>
+<!-- COUNTRY -->
+<select name="country" id="country" onchange="updateStates()" required>
+    <option value="">Select Country</option>
+    {% for c in countries %}
+        <option value="{{ c }}">{{ c }}</option>
+    {% endfor %}
+</select><br><br>
 
-        <select name="country" required>
-            {% for country in countries %}
-                <option value="{{ country }}">{{ country }}</option>
-            {% endfor %}
-        </select><br><br>
+<!-- STATE -->
+<select name="state" id="state" required>
+    <option value="">Select State</option>
+</select><br><br>
+
+<script>
+    const states = {{ states | tojson }};
+
+    function updateStates() {
+        const country = document.getElementById("country").value;
+        const stateSelect = document.getElementById("state");
+
+        stateSelect.innerHTML = '<option value="">Select State</option>';
+
+        if (states[country]) {
+            states[country].forEach(function(state) {
+                let option = document.createElement("option");
+                option.value = state;
+                option.text = state;
+                stateSelect.appendChild(option);
+            });
+        }
+    }
+</script>
 
         <input type="file" name="image"><br><br>
         <button type="submit">Post Product</button>
