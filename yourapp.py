@@ -273,17 +273,17 @@ def event_detail(event_id):
     <p><b>Address:</b> {event[7]}, {event[8]}, {event[9]}, {event[10]}, {event[11]}</p>
     <p>{event[4]}</p>
     <form action="/buy-ticket/{event[0]}" method="POST">
-        <button type="submit">Buy Ticket</button>
+        <button type="submit">Buy Product</button>
     </form>
     """
     return html
 
 # --- Country and state options ---
-COUNTRIES = ["United States", "Canada", "Nigeria", "United Kingdom", "India"]
+COUNTRIES = ["United States", "Canada", "Nigeria", "United Kingdom", "India", "Ghana", "South africa"]
 STATES = {
     "United States": ["California", "New York", "Texas", "Florida"],
     "Canada": ["Ontario", "Quebec", "British Columbia"],
-    "Nigeria": ["Lagos", "Abuja", "Kano"],
+    "Nigeria": ["Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno", "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "Gombe", "Imo", "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi", "Kwara", "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo", "Osun", "Oyo", "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara"],
     "United Kingdom": ["England", "Scotland", "Wales"],
     "India": ["Maharashtra", "Delhi", "Karnataka"]
 }
